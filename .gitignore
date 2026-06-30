@@ -1,0 +1,31 @@
+# Dependencies
+**/node_modules/
+**/venv/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# Environment
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# IDE
+.vscode/
+.idea/
+.qodo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs & Build
+*.log
+**/dist/
+**/build/
+**/.vite/
+**/coverage/
+**/*.tsbuildinfo
