@@ -41,7 +41,6 @@ class NombaClient:
       if data["code"] != "00":
         raise Exception(f"Token issue failed: {data}")
 
-      print(data["data"])
       return self._store(data["data"])
 
   async def _refresh(self) -> str:
@@ -124,6 +123,7 @@ class NombaClient:
         data = response.json()
         if data["code"] != "00":
             raise Exception(f"Expire failed: {data}")
+        
         return data["data"]
     
   async def fetch_virtual_account(self, account_ref: str) -> dict:

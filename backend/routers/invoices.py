@@ -31,14 +31,19 @@ async def create_invoice(payload: schema.InvoiceCreate, db: Session = Depends(ge
     account_ref = f"NMBINV-{invoice.id}-{uuid.uuid4().hex[:8]}"
     expiry_date = payload.due_date.strftime("%Y-%m-%d %H:%M:%S")
 
-    # try creating VA — fall back to pool if sandbox limit hit
+    # try creating VA
     try:
         va_data = await nomba.create_virtual_account(
             account_ref=account_ref,
             account_name=f"{customer.name} Invoice",
             expiry_date=expiry_date
         )
-        va = models.VirtualAccount(
+    except Exception as e:
+        db.delete(invoice)
+        db.commit()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    va = models.VirtualAccount(
             invoice_id=invoice.id,
             account_ref=account_ref,
             account_number=va_data["bankAccountNumber"],
@@ -47,33 +52,10 @@ async def create_invoice(payload: schema.InvoiceCreate, db: Session = Depends(ge
             account_holder_id=va_data["accountHolderId"],
             expires_at=payload.due_date,
             active=True
-        )
-        db.add(va)
-        db.commit()
-        db.refresh(va)
-
-    except Exception as e:
-        if "2 sandbox virtual accounts" in str(e):
-            # sandbox limit — grab from pool
-            va = db.query(models.VirtualAccount)\
-                .filter(models.VirtualAccount.invoice_id == None)\
-                .filter(models.VirtualAccount.active == True)\
-                .first()
-            if not va:
-                # clean up the saved invoice before raising
-                db.delete(invoice)
-                db.commit()
-                raise HTTPException(
-                    status_code=503,
-                    detail="No virtual accounts available in pool. Sandbox limit reached."
-                )
-            va.invoice_id = invoice.id
-            db.commit()
-            db.refresh(va)
-        else:
-            db.delete(invoice)
-            db.commit()
-            raise HTTPException(status_code=500, detail=str(e))
+    )
+    db.add(va)
+    db.commit()
+    db.refresh(va)
 
     return {
         "invoice": invoice,
@@ -162,20 +144,3 @@ async def update_invoice_status(
     invoice.status = status
     db.commit()
     return {"invoice_id": invoice_id, "status": status}
-
-
-@router.delete("/va/{account_ref}")
-async def release_account(account_ref: str, db: Session = Depends(get_db)):
-    va = db.query(models.VirtualAccount)\
-        .filter(models.VirtualAccount.account_ref == account_ref)\
-        .first()
-    # if not va:
-    #     raise HTTPException(status_code=404, detail="Virtual account not found")
-    # try:
-    #     await nomba.expire_virtual_account(account_ref)
-    # except Exception as e:
-    #     raise HTTPException(status_code=500, detail=f"Nomba expire failed: {str(e)}")
-    va.invoice_id = None
-    va.active = True
-    db.commit()
-    return {"message": "Virtual account released back to pool"}
