@@ -111,3 +111,25 @@ class Refund(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)
 
     payment = relationship("Payment", back_populates="refund")
+
+class Merchant(Base):
+    __tablename__ = "merchants"
+
+    id = Column(Integer, primary_key=True)
+
+    business_name = Column(String(150))
+    owner_name = Column(String(100))
+
+    phone = Column(String(20), unique=True)
+    email = Column(String(100), unique=True)
+
+    nomba_client_id = Column(Text)
+    nomba_private_key = Column(Text)
+    nomba_account_id = Column(String(100))
+
+    onboarding_completed = Column(Boolean, default=False)
+
+    created_at = Column(DateTime(timezone=True), default=utcnow)
+
+    customers = relationship("Customer")
+    invoices = relationship("Invoice")
