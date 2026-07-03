@@ -12,6 +12,6 @@ app.include_router(webhook.router, tags=["Webhook"])
 app.include_router(invoices.router, prefix="/invoices", tags=["Invoices"])
 app.include_router(virtual_accounts.router, prefix="/virtual-accounts", tags=["Virtual Accounts"])
 
-app.get("/health")
+@app.get("/health")
 async def health():
   return {"status": "ok"}
